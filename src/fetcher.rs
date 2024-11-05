@@ -4,7 +4,7 @@ use chrono::DateTime;
 use imap::{self, types::Fetches};
 use mailparse;
 
-const DATE_TIME_OUTPUT_FORMAT: &str = "%Y-%m-%dT%H-%M-%S";
+const DATE_TIME_OUTPUT_FORMAT: &str = "%Y-%m-%dT%H-%M";
 const PORT: u16 = 993;
 
 pub fn fetch_subject_messages(
@@ -60,12 +60,14 @@ fn save_attachments(messages: Fetches, subject: &str, output: &Path) {
         let date = DateTime::parse_from_rfc2822(&date)
             .expect("Failed to parse date")
             .format(DATE_TIME_OUTPUT_FORMAT);
+        let file = output.join(format!("{date}-{subject}.xlsx"));
+        if file.exists() {
+            continue;
+        }
 
         let attachment = mail.subparts[1]
             .get_body_raw()
             .expect("Failed to detach attachment");
-
-        let file = output.join(format!("{date}-{subject}.xlsx"));
         fs::write(file, attachment).expect("Failed to write attachment to disk");
     }
 }

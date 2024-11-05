@@ -49,7 +49,6 @@ fn main() {
 
         Cli::OnDuty(cmd) => {
             let aggregation_data = io::read_parquet(&aggregation_path);
-            dbg!(&aggregation_data);
             let on_duty = data::calculate(aggregation_data);
             if cmd.print {
                 println!("{on_duty}");

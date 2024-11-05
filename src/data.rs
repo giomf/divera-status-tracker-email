@@ -12,6 +12,8 @@ pub const DATE_COLUMN_NAME: &str = "Date";
 pub const TOTAL_ON_DUTY_COLUMN_NAME: &str = "Total On-Duty";
 const WEEKEND_ON_DUTY_COLUMN_NAME: &str = "Weekend On-Duty";
 const OFF_DUTY_WITH_NOTE_COLUMN_NAME: &str = "Off-Duty with Note";
+const WEEKEND_BEGIN_HOUR: i8 = 18;
+const YEAR_MONTHS: u32 = 12;
 
 lazy_static::lazy_static! {
     static ref DATES: Expr = col(DATE_COLUMN_NAME);
@@ -65,7 +67,7 @@ pub fn history(df: DataFrame, minimum: u32, year: Option<i32>, month: Option<u32
     let history = df.clone().lazy();
 
     let history = if let (Some(year), Some(month)) = (year, month) {
-        let (to_year, to_month) = if month == 12 {
+        let (to_year, to_month) = if month == YEAR_MONTHS {
             (year + 1, 1)
         } else {
             (year, month + 1)
@@ -150,14 +152,12 @@ fn calculate_total_on_duty(df: &DataFrame) -> DataFrame {
 }
 
 fn calculate_weekend_on_duty(df: &DataFrame) -> DataFrame {
-    let dates = col("date");
-
-    let weekend = dates.clone().dt().weekday().gt(lit(5)).or(dates
+    let weekend = DATES.clone().dt().weekday().gt(lit(5)).or(DATES
         .clone()
         .dt()
         .weekday()
         .eq(lit(5))
-        .and(dates.clone().dt().hour().gt_eq(lit(18))));
+        .and(DATES.clone().dt().hour().gt_eq(lit(WEEKEND_BEGIN_HOUR))));
 
     let weekend_on_duty = STATE.clone().and(weekend.clone()).sum();
 
