@@ -14,6 +14,7 @@ const WEEKEND_ON_DUTY_COLUMN_NAME: &str = "Weekend On-Duty";
 const OFF_DUTY_WITH_NOTE_COLUMN_NAME: &str = "Off-Duty with Note";
 const WEEKEND_BEGIN_HOUR: i8 = 18;
 const YEAR_MONTHS: u32 = 12;
+const WEEKDAY_FRIDAY: u32 = 5;
 
 lazy_static::lazy_static! {
     static ref DATES: Expr = col(DATE_COLUMN_NAME);
@@ -136,7 +137,7 @@ fn calculate_total_on_duty(df: &DataFrame) -> DataFrame {
         .clone()
         .lazy()
         .select([
-            (STATE.clone().sum().cast(DataType::Float32) / COUNT.clone() * lit(100))
+            (STATE.clone().sum().cast(DataType::Float32) / STATE.clone().count() * lit(100))
                 .name()
                 .keep(),
         ])
@@ -144,7 +145,6 @@ fn calculate_total_on_duty(df: &DataFrame) -> DataFrame {
         .unwrap()
         .transpose(Some("name"), None)
         .unwrap();
-
     total_on_duty
         .rename("column_0", TOTAL_ON_DUTY_COLUMN_NAME)
         .unwrap()
@@ -152,27 +152,33 @@ fn calculate_total_on_duty(df: &DataFrame) -> DataFrame {
 }
 
 fn calculate_weekend_on_duty(df: &DataFrame) -> DataFrame {
-    let weekend = DATES.clone().dt().weekday().gt(lit(5)).or(DATES
+    let weekend = DATES
         .clone()
         .dt()
         .weekday()
-        .eq(lit(5))
-        .and(DATES.clone().dt().hour().gt_eq(lit(WEEKEND_BEGIN_HOUR))));
+        .gt(lit(WEEKDAY_FRIDAY))
+        .or(DATES
+            .clone()
+            .dt()
+            .weekday()
+            .eq(lit(WEEKDAY_FRIDAY))
+            .and(DATES.clone().dt().hour().gt_eq(lit(WEEKEND_BEGIN_HOUR))));
 
-    let weekend_on_duty = STATE.clone().and(weekend.clone()).sum();
+    let weekend_on_duty = STATE.clone().and(weekend.clone());
+    let active_weekend_on_duty = STATE.clone().is_not_null().and(weekend.clone());
 
-    let mut weekend_on_duty = df
-        .clone()
-        .lazy()
-        .select([
-            (weekend_on_duty.cast(DataType::Float32) / weekend.sum() * lit(100))
-                .name()
-                .keep(),
-        ])
-        .collect()
-        .unwrap()
-        .transpose(Some("name"), None)
-        .unwrap();
+    let mut weekend_on_duty =
+        df.clone()
+            .lazy()
+            .select([(weekend_on_duty.sum().cast(DataType::Float32)
+                / active_weekend_on_duty.sum()
+                * lit(100))
+            .name()
+            .keep()])
+            .collect()
+            .unwrap()
+            .transpose(Some("name"), None)
+            .unwrap();
 
     weekend_on_duty
         .rename("column_0", WEEKEND_ON_DUTY_COLUMN_NAME)
