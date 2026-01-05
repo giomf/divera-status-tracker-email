@@ -9,7 +9,7 @@ mod io;
 
 const OUTPUT: &str = "output";
 const ATTACHMENTS: &str = "attachments";
-const ON_DUTY_NAME: &str = "on-duty.xlxs";
+const ON_DUTY_NAME: &str = "on-duty.xlsx";
 const HISTORY_NAME: &str = "history.html";
 
 fn main() {
